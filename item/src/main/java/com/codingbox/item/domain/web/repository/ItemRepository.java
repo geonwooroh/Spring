@@ -38,6 +38,11 @@ public class ItemRepository {
 		findItem.setItemName(updatParam.getItemName());
 		findItem.setPrice(updatParam.getPrice());
 		findItem.setQuantity(updatParam.getQuantity());
+		
+		findItem.setOpen(updatParam.getOpen());
+		findItem.setRegions(updatParam.getRegions());
+		findItem.setItemType(updatParam.getItemType());
+		findItem.setDeliveryCode(updatParam.getDeliveryCode());
 	}
 	
 	// store clear

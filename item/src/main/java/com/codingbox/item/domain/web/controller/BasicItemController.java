@@ -1,10 +1,16 @@
 package com.codingbox.item.domain.web.controller;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,7 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.codingbox.item.domain.web.dto.DeliveryCode;
 import com.codingbox.item.domain.web.dto.Item;
+import com.codingbox.item.domain.web.dto.ItemType;
 import com.codingbox.item.domain.web.repository.ItemRepository;
 
 import jakarta.annotation.PostConstruct;
@@ -28,6 +36,37 @@ import lombok.RequiredArgsConstructor;
 public class BasicItemController {
 	
 	private final ItemRepository itemRepository;
+	/*
+	 * @ModelAttribute :
+	 * 컨트롤러를 호출할 때 (어떤 메서드가 호출되던지 간에)
+	 * 모델에 자동으로 해당내용이 담기도록 보장이 된다.
+	 */
+	
+	@ModelAttribute("regions")
+	public Map<String, String>regions(){
+		//기존 해시맵은 순서가 보장되지 않는다.
+		//LinkedHashMap : 순서가 보장이 된다.
+		Map<String,String> regions = new LinkedHashMap<>();
+		regions.put("SEOUL", "서울");
+		regions.put("BUSAN", "부산");
+		regions.put("JEJU", "제주");
+		//model.addAttribute("regions",regions);
+		return regions;
+	}
+	
+	@ModelAttribute("itemTypes")
+	public ItemType[] itemType() {
+		//enum에 있는 값을 배열로 넘겨준다
+		return ItemType.values();
+	}
+	@ModelAttribute("deliveryCodes")
+	public List<DeliveryCode> deliveryCodes(){
+		List<DeliveryCode> deliveryCodes = new ArrayList<>();
+		deliveryCodes.add(new DeliveryCode("FAST", "빠른 배송"));
+		deliveryCodes.add(new DeliveryCode("NORMAL", "일반 배송"));
+		deliveryCodes.add(new DeliveryCode("SLOW", "느린 배송"));
+		return deliveryCodes;
+	}
 	
 //	@Autowired
 	// 이렇게 생성자가 딱 1개만 있으면 스프링이 해동 생성자에게
@@ -51,9 +90,11 @@ public class BasicItemController {
 	}
 	
 	@GetMapping("/add")
-	public String addForm() {
+	public String addForm(Model model) {
+		model.addAttribute("item",new Item());
 		return "basic/addForm";
 	}
+	
 	/*
 	 * /basic/items/add url mapping
 	 * 파라미터 받아오기, 
@@ -133,11 +174,100 @@ public class BasicItemController {
 		
 		return "redirect:/basic/items/"+ item.getId();
 	}
-	@PostMapping("/add")
+	//@PostMapping("/add")
 	public String saveItemV6(Item item,
 			RedirectAttributes redirectAttributes) {
+		
+		System.out.println("Item.open : " + item.getOpen());
+		System.out.println("Item.regions : " +item.getRegions());
+		System.out.println("Item.itemType : " +item.getItemType());
+		
 		Item savedItem = itemRepository.save(item);
 		//redirectAttributes.addAttribute("itemId", savedItem);
+		redirectAttributes.addAttribute("status", true);
+		return "redirect:/basic/items/"+ item.getId();
+	}
+	/*
+	 * BindingResult : Item객체에 값이 잘 담기지 않을 때 
+	 * BindingResult 객체에 값이 담기게 된다.
+	 * StringUtils : 값이 있을 경우에는 true 반환하고, 공백이나 null이 들어올 경우에는 false반환
+	 */
+	//@PostMapping("/add")
+	public String saveItemV7(Item item, BindingResult bindingResult,
+			RedirectAttributes redirectAttributes) {
+		if(!StringUtils.hasText(item.getItemName())) {
+			bindingResult.addError(
+					//FieldError : feild 단위의 error는 spring에서 제공해주는 객체
+					new FieldError("item","itemName","상품이름은 필수입니다"));
+		}
+		if(item.getPrice() == null || item.getPrice() < 1000  || item.getPrice() >1000000) {
+			bindingResult.addError(
+					new FieldError("item","price","가격은 1,000, ~1,000,000 까지 허용"));
+		}
+		if(item.getQuantity() == null || item.getQuantity() >10000) {
+			bindingResult.addError(
+					new FieldError("item","quantity","수량은 최대 9,999까지 허용"));
+		}
+			//검증에 실패한다면 다시 입력 폼
+		if(bindingResult.hasErrors()) {
+			System.out.println("errors : " + bindingResult);
+			return "basic/addForm";
+		}
+		Item savedItem = itemRepository.save(item);
+		redirectAttributes.addAttribute("status", true);
+		return "redirect:/basic/items/"+ item.getId();
+	}
+	//@PostMapping("/add")
+	public String saveItemV8(Item item, BindingResult bindingResult,
+			RedirectAttributes redirectAttributes) {
+		if(!StringUtils.hasText(item.getItemName())) {
+			bindingResult.addError(
+					new FieldError("item","itemName", item.getItemName(),
+							false, null, null, "상품이름은 필수입니다"));
+		}
+		if(item.getPrice() == null || item.getPrice() < 1000  || item.getPrice() >1000000) {
+			bindingResult.addError(
+					new FieldError("item","price",item.getPrice(),
+							true,null,null,"가격은 1,000, ~1,000,000 까지 허용"));
+		}
+		if(item.getQuantity() == null || item.getQuantity() >10000) {
+			bindingResult.addError(
+					new FieldError("item","quantity",item.getQuantity(),
+							false,null,null,"수량은 최대 9,999까지 허용"));
+		}
+			//검증에 실패한다면 다시 입력 폼
+		if(bindingResult.hasErrors()) {
+			System.out.println("errors : " + bindingResult);
+			return "basic/addForm";
+		}
+		Item savedItem = itemRepository.save(item);
+		redirectAttributes.addAttribute("status", true);
+		return "redirect:/basic/items/"+ item.getId();
+	}
+	@PostMapping("/add")
+	public String saveItemV9(Item item, BindingResult bindingResult,
+			RedirectAttributes redirectAttributes) {
+		if(!StringUtils.hasText(item.getItemName())) {
+			bindingResult.addError(
+					new FieldError("item","itemName", item.getItemName(),
+							false, null, null, "상품이름은 필수입니다"));
+		}
+		if(item.getPrice() == null || item.getPrice() < 1000  || item.getPrice() >1000000) {
+			bindingResult.addError(
+					new FieldError("item","price",item.getPrice(),
+							true,null,null,"가격은 1,000, ~1,000,000 까지 허용"));
+		}
+		if(item.getQuantity() == null || item.getQuantity() >10000) {
+			bindingResult.addError(
+					new FieldError("item","quantity",item.getQuantity(),
+							false,null,null,"수량은 최대 9,999까지 허용"));
+		}
+			//검증에 실패한다면 다시 입력 폼
+		if(bindingResult.hasErrors()) {
+			System.out.println("errors : " + bindingResult);
+			return "basic/addForm";
+		}
+		Item savedItem = itemRepository.save(item);
 		redirectAttributes.addAttribute("status", true);
 		return "redirect:/basic/items/"+ item.getId();
 	}
@@ -160,7 +290,7 @@ public class BasicItemController {
 	@PostMapping("/{itemId}/edit")
 	public String edit(@PathVariable Long itemId,
 						@ModelAttribute Item item) {
-		
+		System.out.println("item : " +item.getOpen());
 		itemRepository.update(itemId,item);
 		return "redirect:/basic/items/{itemId}";
 	}
