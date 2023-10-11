@@ -1,5 +1,7 @@
 package com.codingbox.jpashop;
 
+import java.util.List;
+
 import com.codingbox.jpashop.relation.Member;
 import com.codingbox.jpashop.relation.Team;
 
@@ -26,7 +28,8 @@ public class JpaMain {
 		Member member = new Member();
 		member.setUsername("member1");
 		//member.setTeamId(team.getId());
-		member.setTeam(team); // 아이디만 가져오는게 아니라 전부
+		//member.setTeam(team); // 아이디만 가져오는게 아니라 전부
+		member.changeTeam(team);
 		em.persist(member);
 		
 		
@@ -47,6 +50,12 @@ public class JpaMain {
 		Team findTeam = findMember.getTeam();  //여기서도 팀의 정보 가져옴. 아이디만 가져오는게 아니라 전부. 위에서는 id값을 가져오지만 이건 전부 다 가져온다.
 		System.out.println("findTeam : " + findTeam.getName());
 		
+		//양방향 매핑
+		Member findSideMember = em.find(Member.class, member.getId());
+		List<Member> members= findSideMember.getTeam().getMember();
+		for(Member m : members) {
+			System.out.println("result = " + m.getUsername());
+		}
 		
 		tx.commit();
 		

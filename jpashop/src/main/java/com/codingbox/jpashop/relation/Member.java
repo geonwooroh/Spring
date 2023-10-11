@@ -8,10 +8,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
-@Entity
+//@Entity
 @Getter @Setter
 public class Member {
 	
@@ -31,7 +32,20 @@ public class Member {
 	 */
 	
 	@ManyToOne
-	@JoinColumn(name = "TEAM_ID")
-	private Team team;
+	@JoinColumn(name = "TEAM_ID")//fk키 걸기
+	@Setter(value = AccessLevel.NONE) //LOMBOK에서 자동 SETTER를 막는다.
+	private Team team; //Team에서 mappedBy = "team"으로 일치시켜야 함
+	
+	
+	//일반적인 setter의 형태가 아니면 메서드 이름을 바꿔준다.
+	//추후 코드를 봤을 때 단순 setter작업이 아닌 중요한 작업을 진행하는지를 파악할 수 있다.
+	public void changeTeam(Team team) {
+		this.team = team;
+		// this : 나 자신의 인스턴스(객체)
+		team.getMember().add(this);
+	}
+	public void setTeam(Team team) {
+		this.team = team;
+	}
 	
 }
